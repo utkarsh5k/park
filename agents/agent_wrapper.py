@@ -17,6 +17,9 @@ class ParkAgent(gym.Env):
     def reset(self):
         return self.env.reset()
 
+    def reset(self, trace_min = 0, trace_max = 1000):
+        return self.env.reset(trace_min, trace_max) 
+
     def get_gym_space(self, space):
         if type(space) == park.spaces.Box:
             return self.get_gym_box_space(space)
