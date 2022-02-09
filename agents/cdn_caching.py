@@ -12,7 +12,11 @@ class A2CAgent():
 
         self.model = A2C("MlpPolicy", env, learning_rate = 0.0003, policy_kwargs = policy_kwargs)
 
-    def train_model(self):
+    def train_model(self, load = False):
+        if load: 
+            self.load_saved_model()
+            return 
+
         self.model.learn(total_timesteps = 1000000)
         self.model.save("./trained_agents/cache_a2c")
 
@@ -37,33 +41,35 @@ class ModelRunner():
             obs = env.reset(trace_id, trace_id + 1)
             rewards = []
             done = False
-            while not done:
+            for _ in range(10000):
                 action, _ = model.predict(obs)
                 obs, reward, done, _ = env.step(action)
                 rewards.append(reward)
+                if done: 
+                    obs = env.reset(trace_id, trace_id + 1)
             
             rewards_all_traces.append(rewards)
 
-        return rewards_all_traces
+        rewards_all_traces = np.array(rewards_all_traces)
+        return rewards_all_traces.mean(axis = 0)
 
 if __name__ == '__main__':
     env = agent_wrapper.ParkAgent('cache')
 
     rl_agent = A2CAgent(env)
-    rl_agent.train_model()
+    rl_agent.train_model(load = True)
 
     greedy_agent = AlwaysAdmitAgent()
 
     runner = ModelRunner()
 
-    trace_ids = [np.random.randint(0, 1000) for _ in range(1)]
+    trace_ids = [np.random.randint(0, 1000) for _ in range(10)]
     plotter = PlotHelper('cache', 'a2c', 'LRU')
     
     rl_results = runner.run_model_on_env(env, rl_agent.model, trace_ids)
-    print(rl_results)
-    plotter.plot_rewards(rl_results[0])
+    plotter.plot_rewards(rl_results)
     greedy_results = runner.run_model_on_env(env, greedy_agent, trace_ids)
     env.close()
 
-    plotter.plot_comparison(rl_results[0], greedy_results[0])
+    plotter.plot_comparison(rl_results, greedy_results)
 
