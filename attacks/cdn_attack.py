@@ -39,7 +39,7 @@ class ModelRunner():
 class CacheCrossEntropyAttack(): 
     def __init__(self):
         self.cache_size_min = 1
-        self.cache_size_max = 1024
+        self.cache_size_max = 20480
         self.obj_id_min = 0
         self.obj_id_max = 1000
         self.time_width_max = 200
@@ -49,13 +49,11 @@ class CacheCrossEntropyAttack():
             return -int(size)
         elif size < self.cache_size_min: 
             return self.cache_size_min
-        elif size > self.cache_size_max:
-            return self.cache_size_max
         
         return int(size) 
 
     def init_baseline_sequence(self):
-        self.init_sequence(512, 512)
+        self.init_sequence(int(self.cache_size_max / 2), int(self.cache_size_max / 2))
 
     def init_sequence(self, size_mean, size_var, file_id = 1000):
         file_name = f"../park/envs/cache/traces/test_trace/test_{file_id}.tr"
@@ -85,7 +83,7 @@ class CacheCrossEntropyAttack():
         model_runner = ModelRunner()
 
         prev_divergence = 0
-        cur_mean, cur_std = 512, 512
+        cur_mean = cur_std = int(self.cache_size_max / 2)
         all_greedy_total_rewards = []
         all_rl_total_rewards = []
 
@@ -100,12 +98,12 @@ class CacheCrossEntropyAttack():
             all_rl_total_rewards.append(rl_total_reward)
 
             if greedy_total_reward - rl_total_reward > prev_divergence: 
-                cur_mean, cur_std = np.mean(self.cache_entries_sizes), np.std(self.cache_entries_sizes)
                 prev_divergence = greedy_total_reward - rl_total_reward
                 print(f"Achieved divergence {prev_divergence}")
             else: 
                 print("Could not find an improvement of attack!")
-            
+
+            cur_mean, cur_std = np.mean(self.cache_entries_sizes), int(self.cache_size_max)
             self.init_sequence(cur_mean, cur_std)
 
         plotter = PlotHelper('cache', 'a2c', 'lru')
@@ -114,6 +112,6 @@ class CacheCrossEntropyAttack():
 
 if __name__ == '__main__':
     attacker = CacheCrossEntropyAttack()
-    attacker.run_attack(3) 
+    attacker.run_attack(100) 
             
 

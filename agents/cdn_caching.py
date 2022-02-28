@@ -17,7 +17,7 @@ class A2CAgent():
             self.load_saved_model()
             return 
 
-        self.model.learn(total_timesteps = 1000000)
+        self.model.learn(total_timesteps = 1000)
         self.model.save("./trained_agents/cache_a2c")
 
     def load_saved_model(self):

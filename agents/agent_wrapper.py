@@ -3,13 +3,17 @@ sys.path.insert(1, '../')
 
 import park 
 import gym 
+import torch
+import numpy as np
 
 class ParkAgent(gym.Env):
     def __init__(self, env_name):
         self.env = park.make(env_name)
         self.action_space = self.get_gym_space(self.env.action_space)
-        self.observation_space = self.get_gym_space(self.env.observation_space)
-        print(isinstance(self.observation_space, gym.spaces.Box))
+        if env_name == 'tf_placement_sim':
+            self.observation_space = gym.spaces.Box(low = 0, high = 1, shape = (1, 4), dtype = np.float)
+        else:
+            self.observation_space = self.get_gym_space(self.env.observation_space)
 
     def step(self, action):
         return self.env.step(action)
@@ -17,17 +21,24 @@ class ParkAgent(gym.Env):
     def reset(self):
         return self.env.reset()
 
-    def reset(self, trace_min = 0, trace_max = 1000):
-        return self.env.reset(trace_min, trace_max) 
+    # def reset(self, trace_min = 0, trace_max = 1000):
+    #     return self.env.reset(trace_min, trace_max) 
 
     def get_gym_space(self, space):
         if type(space) == park.spaces.Box:
             return self.get_gym_box_space(space)
         elif type(space) == park.spaces.Discrete:
             return self.get_gym_discrete_space(space)
+        elif type(space) == park.spaces.Tuple:
+            return self.get_gym_tuple_space(space)
         
         print(type(space))
         raise NotImplementedError
+
+    def get_gym_tuple_space(self, space): 
+        print(space[0].sample())
+        print(space[1])
+        return gym.spaces.Tuple(space)
 
     def get_gym_box_space(self, space): 
         return gym.spaces.Box(
@@ -65,3 +76,14 @@ class ParkBoxSpace(gym.spaces.Box):
 
     def contains(self, x):
         return self.park_box_space.contains(x)
+
+class ParkTupleSpace(gym.spaces.Tuple): 
+    def __init__(self, space): 
+        self.tuple_space = space
+    
+    def sample(self): 
+        return self.tuple_space.sample()
+    
+    def contains(self, x): 
+        return self.tuple_space.contains(x)
+
