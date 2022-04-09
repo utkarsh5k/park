@@ -5,33 +5,10 @@
 - This will contain learnt RL models over several environments 
 - Will also contain attacks against said models 
 
-### Real system interface
-```
-import park
-import agent_impl  # implemented by user
+### Setting up 
 
-env = park.make('congestion_control')
-
-# the run script will start the real system
-# and periodically invoke agent.get_action
-agent = Agent(env.observation_space, env.action_space)
-env.run(agent)
-```
-
-The `agent_impl.py` should implement
-```
-class Agent(object):
-    def __init__(self, state_space, action_space, *args, **kwargs):
-        self.state_space = state_space
-        self.action_space = action_space
-
-
-
-    def get_action(self, obs, prev_reward, prev_done, prev_info):
-        act = self.action_space.sample()
-        # implement real action logic here
-        return act
-```
+In the root, you will find park-stable.yml which is the conda environment needed to run the code. 
+Run ```conda env create --name park-stable --file=park-stable.yml```
 
 ### Simulation interface
 Similar to OpenAI Gym interface.
@@ -48,6 +25,16 @@ while not done:
     act = env.action_space.sample()
     obs, reward, done, info = env.step(act)
 ```
+
+### Running stable-baselines RL algorithms on park environments 
+
+See ```agents/cdn_caching.py``` for example. 
+
+### Running cross-entropy attacks on environments: 
+
+See ```attacks/cdn_attack.py``` for example. 
+A cross entropy attack defines a gaussian distribution on the input. We then sample repeatedly from this gaussian and look for input sequences that 
+lead in a divergence between RL algorithm's performance and the greedy baseline. When such a divergence is found, we take the input samples that successfully caused the divergence and use the mean and standard deviation of these new samples to adjust our gaussian on the input distribution. 
 
 ### Contributors
 
