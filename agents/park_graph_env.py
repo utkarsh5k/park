@@ -8,6 +8,9 @@ import numpy as np
 import torch.nn.functional as F
 from torch_geometric.data import Data
 
+# setting device on GPU if available, else CPU
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 class GraphDictTransform(): 
     def __init__(self, graph): 
         self.name_to_index = {}
@@ -60,7 +63,6 @@ class ParkGraphEnv(gym.Env):
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        print(f"Reward: {reward}")
         return GraphDictTransform(obs).get_obs_as_dict(), reward, done, info
         
     def reset(self):

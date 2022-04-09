@@ -1,7 +1,8 @@
+from tkinter import Place
 from numpy import dtype
 import park 
 from PlotUtils import PlotHelper
-from stable_baselines3 import PPO, A2C
+from stable_baselines3 import PPO, A2C, DDPG
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -10,10 +11,15 @@ from torch_geometric.nn import GCNConv
 import numpy as np 
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from agent_wrapper import ParkAgent
-from park_graph_env import ParkGraphEnv
+from park_graph_env import GraphDictTransform, ParkGraphEnv
+from tf_utils.dp_baseline.baseline_benchmark import DevicePlDPBenchmark
+from tf_utils.placement_simulator import PlacementSimulator
 
 import warnings 
 warnings.filterwarnings("ignore")
+
+# setting device on GPU if available, else CPU
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class GCNFeatureExtractor(BaseFeaturesExtractor): 
     def __init__(self, observation_space, num_node_features = 4): 
@@ -49,7 +55,7 @@ class PGGCNAgent():
             net_arch=[dict(pi=[16, 32], vf=[16, 32])])
 
 
-        self.model = A2C("MultiInputPolicy", env, learning_rate = 0.0003, policy_kwargs = policy_kwargs, verbose=1)
+        self.model = A2C("MultiInputPolicy", env, learning_rate = 0.003, policy_kwargs = policy_kwargs, verbose=1)
 
     def train_model(self, load = False):
         if load: 
@@ -73,32 +79,34 @@ class ModelRunner():
     def __init__(self):
         pass
 
-    def run_model_on_env(self, env, model, trace_ids):
-        rewards_all_traces = []
-        for trace_id in trace_ids:
-            print(f"Running trace #{trace_id}")
-            obs = env.reset(trace_id, trace_id + 1)
-            rewards = []
-            done = False
-            for _ in range(10000):
-                action, _ = model.predict(obs)
-                obs, reward, done, _ = env.step(action)
-                rewards.append(reward)
-                if done: 
-                    obs = env.reset(trace_id, trace_id + 1)
+    def run_model_on_env(self, env, model):
+        obs = env.reset()
+        rewards = []
+        done = False
+        while not done:
+            action, _ = model.predict(obs)
+            obs, reward, done, _ = env.step(action)
+            rewards.append(reward)
+            if done: 
+                break
             
-            rewards_all_traces.append(rewards)
-
-        rewards_all_traces = np.array(rewards_all_traces)
-        return rewards_all_traces.mean(axis = 0)
+        rewards = np.array(rewards)
+        return rewards.sum(axis = 0), obs
 
 if __name__ == '__main__':
     #env = ParkAgent('tf_placement_sim')
     env = ParkGraphEnv('tf_placement_sim')
 
-    #print(env.observation_space)
-
     agent = PGGCNAgent(env)
     agent.train_model()
-    
+    runner = ModelRunner()
+    reward, final_placement = runner.run_model_on_env(env, agent.model)    
+    env.reset()
+    obs_as_dict, _, _, _ = env.step(2) 
+    baseline = DevicePlDPBenchmark(5)
+    simulator = PlacementSimulator(obs_as_dict["node_features"], 
+        obs_as_dict["adj_matrix"],
+        env.action_space.n,
+        7600)
 
+    latency = simulator.simulate()
