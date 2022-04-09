@@ -96,17 +96,20 @@ class ModelRunner():
 if __name__ == '__main__':
     #env = ParkAgent('tf_placement_sim')
     env = ParkGraphEnv('tf_placement_sim')
-
-    agent = PGGCNAgent(env)
-    agent.train_model()
-    runner = ModelRunner()
-    reward, final_placement = runner.run_model_on_env(env, agent.model)    
     env.reset()
-    obs_as_dict, _, _, _ = env.step(2) 
-    baseline = DevicePlDPBenchmark(5)
+    # agent = PGGCNAgent(env)
+    # agent.train_model()
+    # runner = ModelRunner()
+    # reward, final_placement = runner.run_model_on_env(env, agent.model)    
+    # env.reset()
+    # obs_as_dict, _, _, _ = env.step(2) 
+    # baseline = DevicePlDPBenchmark(5)
+
+    obs_as_dict, _, _, _ = env.step(2)
     simulator = PlacementSimulator(obs_as_dict["node_features"], 
         obs_as_dict["adj_matrix"],
         env.action_space.n,
         7600)
 
     latency = simulator.simulate()
+    print(latency)
